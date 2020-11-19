@@ -22,6 +22,7 @@ except (ValueError, ImportError):  # pragma: no cover
 from virtinst import log
 
 from .sshtunnels import SSHTunnels
+from .spicewebdav import vmmSpiceWebdav
 from ..baseclass import vmmGObject
 
 
@@ -191,6 +192,11 @@ class Viewer(vmmGObject):
     def _has_agent(self):
         raise NotImplementedError()
 
+    def _has_spice_webdav_folder_sharing(self):
+        raise NotImplementedError()
+    def _get_spice_webdav_folder_sharing_dialog(self):
+        raise NotImplementedError()
+
 
     ####################################
     # APIs accessed by vmmConsolePages #
@@ -251,6 +257,11 @@ class Viewer(vmmGObject):
         return self._has_usb_redirection()
     def console_has_agent(self):
         return self._has_agent()
+
+    def console_has_spice_webdav_folder_sharing(self):
+        return self._has_spice_webdav_folder_sharing()
+    def console_get_spice_webdav_folder_sharing_dialog(self):
+        return self._get_spice_webdav_folder_sharing_dialog()
 
     def console_remove_display_from_widget(self, widget):
         if self._display and self._display in widget.get_children():
@@ -419,6 +430,11 @@ class VNCViewer(Viewer):
     def _has_agent(self):
         return False  # pragma: no cover
 
+    def _has_spice_webdav_folder_sharing(self):
+        return False
+    def _get_spice_webdav_folder_sharing_dialog(self):
+        return None
+
 
     #######################
     # Connection routines #
@@ -480,6 +496,8 @@ class SpiceViewer(Viewer):
         self._main_channel = None
         self._display_channel = None
         self._usbdev_manager = None
+        self._webdav_channel = None
+        self._webdav_folder_sharing_dialog = None
         self._channels = set()
 
 
@@ -626,6 +644,9 @@ class SpiceViewer(Viewer):
             # does matter:
             # https://bugzilla.redhat.com/show_bug.cgi?id=1881080
             self._audio = SpiceClientGLib.Audio.get(self._spice_session, None)
+        elif (type(channel) == SpiceClientGLib.WebdavChannel and
+                not self._webdav_channel):
+            self._webdav_channel = channel
 
     def _agent_connected_cb(self, src, val):
         self.emit("agent-connected")  # pragma: no cover
@@ -654,6 +675,9 @@ class SpiceViewer(Viewer):
 
         _SIGS.disconnect_obj_signals(self._usbdev_manager)
         self._usbdev_manager = None
+
+        self._webdav_channel = None
+        self._webdav_folder_sharing_dialog = None
 
     def _is_open(self):
         return self._spice_session is not None
@@ -762,3 +786,47 @@ class SpiceViewer(Viewer):
             if c.__class__ is SpiceClientGLib.UsbredirChannel:
                 return True
         return False
+
+    def _has_spice_webdav_folder_sharing(self):
+        return self._webdav_channel is not None
+
+    def _get_spice_webdav_folder_sharing_dialog(self):
+        if not self._spice_session:
+            return
+
+        try:
+            if not self._webdav_folder_sharing_dialog:
+                self._webdav_folder_sharing_dialog = vmmSpiceWebdav(
+                    self._webdav_channel.get_property("port-opened"),
+                    self._spice_session.get_property("share-dir-ro"),
+                    self._spice_session.get_property("shared-dir"))
+
+                self._webdav_folder_sharing_dialog.connect(
+                    vmmSpiceWebdav.SHARE_FOLDER_RO,
+                    self._on_webdav_folder_share_ro_toggled)
+                self._webdav_folder_sharing_dialog.connect(
+                    vmmSpiceWebdav.SHARE_FOLDER,
+                    self._on_webdav_folder_share_toggled)
+                self._webdav_folder_sharing_dialog.connect(
+                    vmmSpiceWebdav.SHARED_FOLDER,
+                    self._on_webdav_folder_share_changed)
+        except Exception as e:
+            log.error("Error launching 'Share folder' dialog: %s", e)
+
+        return self._webdav_folder_sharing_dialog
+
+    def _on_webdav_folder_share_ro_toggled(self, ignore, enabled):
+        self._spice_session.set_property("share-dir-ro", enabled)
+
+    def _on_webdav_folder_share_toggled(self, ignore, enabled):
+        if enabled:
+            log.debug("Enabling folder sharing, shared dir: %s read-only: %r",
+                      self._spice_session.get_property("shared-dir"),
+                      self._spice_session.get_property("share-dir-ro"))
+            self._webdav_channel.connect()
+        else:
+            log.debug("Disabling folder sharing")
+            self._webdav_channel.disconnect(SpiceClientGLib.ChannelEvent.NONE)
+
+    def _on_webdav_folder_share_changed(self, ignore, folder):
+        self._spice_session.set_property("shared-dir", folder)

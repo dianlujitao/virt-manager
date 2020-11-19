@@ -121,6 +121,15 @@
                         <signal name="activate" handler="on_details_menu_usb_redirection" swapped="no"/>
                       </object>
                     </child>
+                    <child>
+                      <object class="GtkMenuItem" id="details-menu-spice-webdav-folder-sharing">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">_SPICE WebDAV folder sharing</property>
+                        <property name="use_underline">True</property>
+                        <signal name="activate" handler="on_details_menu_spice_webdav_folder_sharing" swapped="no"/>
+                      </object>
+                    </child>
                   </object>
                 </child>
               </object>

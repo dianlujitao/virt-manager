@@ -116,6 +116,7 @@ class vmmVMWindow(vmmGObjectUI):
             "on_details_menu_virtual_manager_activate": self.control_vm_menu,
             "on_details_menu_screenshot_activate": self.control_vm_screenshot,
             "on_details_menu_usb_redirection": self.control_vm_usb_redirection,
+            "on_details_menu_spice_webdav_folder_sharing": self.control_vm_spice_webdav_folder_sharing,
             "on_details_menu_view_toolbar_activate": self.toggle_toolbar,
             "on_details_menu_view_manager_activate": self.view_manager,
             "on_details_menu_view_details_toggled": self.details_console_changed,
@@ -494,6 +495,9 @@ class vmmVMWindow(vmmGObjectUI):
                        self._console.vmwindow_viewer_has_usb_redirection())
         self.widget("details-menu-usb-redirection").set_sensitive(can_usb)
 
+        can_share_folder = self._console.vmwindow_viewer_has_spice_webdav_folder_sharing()
+        self.widget("details-menu-spice-webdav-folder-sharing").set_sensitive(can_share_folder)
+
     def control_vm_run(self, src_ignore):
         if self._details.vmwindow_has_unapplied_changes():
             return
@@ -522,6 +526,10 @@ class vmmVMWindow(vmmGObjectUI):
         spice_usbdev_dialog.show_info(_("Select USB devices for redirection"),
                                       widget=spice_usbdev_widget,
                                       buttons=Gtk.ButtonsType.CLOSE)
+
+    def control_vm_spice_webdav_folder_sharing(self, ignore):
+        folder_sharing_dialog = self._console.vmwindow_viewer_get_spice_webdav_folder_sharing_dialog()
+        folder_sharing_dialog.show(self.topwin)
 
     def _take_screenshot(self):
         image = self._console.vmwindow_viewer_get_pixbuf()

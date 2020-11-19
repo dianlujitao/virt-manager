@@ -672,6 +672,10 @@ class vmmConsolePages(vmmGObjectUI):
                 self._viewer.console_has_usb_redirection() and
                 self.vm.has_spicevmc_type_redirdev())
 
+    def _viewer_can_spice_webdav_folder_sharing(self):
+        return (self._viewer_is_visible() and
+                self._viewer.console_has_spice_webdav_folder_sharing())
+
 
     #########################
     # Viewer login attempts #
@@ -961,6 +965,11 @@ class vmmConsolePages(vmmGObjectUI):
             self._viewer.console_has_usb_redirection())
     def vmwindow_viewer_get_usb_widget(self):
         return self._viewer.console_get_usb_widget()
+    def vmwindow_viewer_has_spice_webdav_folder_sharing(self):
+        return bool(self._viewer and
+            self._viewer.console_has_spice_webdav_folder_sharing())
+    def vmwindow_viewer_get_spice_webdav_folder_sharing_dialog(self):
+        return self._viewer.console_get_spice_webdav_folder_sharing_dialog()
     def vmwindow_viewer_get_pixbuf(self):
         return self._viewer.console_get_pixbuf()
 
@@ -990,6 +999,8 @@ class vmmConsolePages(vmmGObjectUI):
         return self._viewer_is_visible()
     def vmwindow_get_can_usb_redirect(self):
         return self._viewer_can_usb_redirect()
+    def vmwindow_get_can_spice_webdav_folder_sharing(self):
+        return self._viewer_can_spice_webdav_folder_sharing()
     def vmwindow_get_resizeguest_tooltip(self):
         return self._viewer_get_resizeguest_tooltip()
 
